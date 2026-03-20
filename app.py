@@ -89,7 +89,17 @@ if analyze_btn:
         else:
             st.success("### ✅ VERDICT: REAL")
             st.info(f"**Reason:** Natural Language | Confidence: {probs[1]*100:.1f}%")
-
+# Check for a mismatch
+if (prediction_index == 1) and is_fake:
+    st.warning("⚠️ **Heuristic Override Applied**")
+    st.write("""
+        The AI model was uncertain (leaning towards 'Real'), but the system 
+        flagged this as **FAKE** because the text failed our **Linguistic Safety Checks**:
+    """)
+    if unique_ratio < 0.65:
+        st.write(f"- 🚩 **Low Vocabulary Diversity:** (Score: {unique_ratio:.2f}) - The review is too repetitive.")
+    if generic_ratio > 0.35:
+        st.write(f"- 🚩 **High Generic Content:** (Score: {generic_ratio:.2f}) - Uses too many 'filler' praise words.")
         # --- DARK THEME LIME SECTION ---
         st.subheader("Visual Explanation")
         map_names = ['Fake (CG)', 'Real (OR)'] 
