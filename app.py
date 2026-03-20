@@ -39,28 +39,28 @@ with col2:
 
 # --- LOGIC BLOCK ---
 # --- LOGIC BLOCK ---
-if analyze_btn:
-    if review:
-        cleaned = clean_text(review)
-        
-        # 1. Get raw probabilities
-        probs = c.predict_proba([review])[0]
-        prediction_index = np.argmax(probs)
-        
-        # 2. Repetition Check
+# --- STRICTOR HYBRID LOGIC ---
         words = cleaned.split()
-        unique_ratio = len(set(words)) / len(words) if len(words) > 1 else 1
+        unique_ratio = len(set(words)) / len(words) if len(words) > 0 else 1
         
-        # FINAL VERDICT
-        is_fake = (prediction_index == 0) or (unique_ratio < 0.45 and len(words) > 10)
+        # New Rule: Check for "Empty" words (words that say nothing specific)
+        generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy']
+        generic_count = sum(1 for word in words if word in generic_words)
+        generic_ratio = generic_count / len(words) if len(words) > 0 else 0
+
+        # FINAL VERDICT (Stricter)
+        # 1. If model says index 0 (Fake)
+        # 2. OR if uniqueness is low (< 55% unique words)
+        # 3. OR if more than 40% of the review is just generic "praise" words
+        is_fake = (prediction_index == 0) or (unique_ratio < 0.55) or (generic_ratio > 0.4)
 
         st.divider()
         if is_fake:
             st.error("### 🚩 VERDICT: FAKE")
-            st.write(f"**System Confidence:** {probs[0]*100:.1f}%")
+            st.write(f"**Reason:** High repetition ({unique_ratio:.2f}) or generic 'filler' language detected.")
         else:
             st.success("### ✅ VERDICT: REAL")
-            st.write(f"**System Confidence:** {probs[1]*100:.1f}%")
+            st.write(f"**Reason:** Natural linguistic variety and specific vocabulary detected.")
 
         # --- DARK THEME LIME SECTION ---
         st.subheader("Visual Explanation")
