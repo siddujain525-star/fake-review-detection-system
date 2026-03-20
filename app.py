@@ -9,11 +9,12 @@ st.set_page_config(page_title="Fake Review Detector", layout="wide")
 st.title("🔍 Fake Review Detection + Explainability")
 
 # 1. Load your model and vectorizer
+# Ensure these files are in the 'model/' folder on GitHub
 with open("model/fake_review_model.pkl", "rb") as f:
     model, vectorizer = pickle.load(f)
 
 # 2. Create a Pipeline for LIME
-# This ensures LIME handles the text -> vector -> prediction flow correctly
+# This tells LIME how to process raw text through your vectorizer then the model
 c = make_pipeline(vectorizer, model)
 
 review = st.text_area("Enter Review to Analyze", height=150)
@@ -24,19 +25,19 @@ if st.button("Analyze Review"):
         cleaned = clean_text(review)
         prediction = model.predict(vectorizer.transform([cleaned]))[0]
         
-        # Mapping: CG (Computer Generated) = FAKE, OR (Original) = REAL
+        # New Dataset Mapping: CG (Computer Generated) = FAKE, OR (Original) = REAL
         if prediction == "CG":
             label = "FAKE"
-            st.error(f"Prediction: {label}")
+            st.error(f"Analysis Result: {label}")
         else:
             label = "REAL"
-            st.success(f"Prediction: {label}")
+            st.success(f"Analysis Result: {label}")
 
         # --- LIME EXPLAINABILITY SECTION ---
         st.subheader("Why did the AI choose this?")
         
         with st.spinner("Calculating word importance..."):
-            # Use CG/OR labels for LIME as well to keep it consistent
+            # We use ['OR', 'CG'] to match your model's internal labels
             explainer = LimeTextExplainer(class_names=['OR', 'CG'])
             
             exp = explainer.explain_instance(
@@ -45,12 +46,12 @@ if st.button("Analyze Review"):
                 num_features=10
             )
             
-            # --- CSS to fix visibility (Aggressive fix for SVGs) ---
+            # --- CSS to fix dark theme visibility ---
             lime_html = exp.as_html()
             custom_css = """
             <style>
                 * { color: white !important; }
-                text { fill: white !important; } /* Fixes the SVG chart labels */
+                text { fill: white !important; } /* Fixes the chart text */
                 .lime.label { color: #ffaa00 !important; font-weight: bold; }
                 body { background-color: #0e1117; }
             </style>
