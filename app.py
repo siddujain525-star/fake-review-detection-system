@@ -1,83 +1,20 @@
-import streamlit as st
-import joblib
-from src.preprocess import clean_text
-from lime.lime_text import LimeTextExplainer
-import streamlit.components.v1 as components
-from sklearn.pipeline import make_pipeline
-
-st.set_page_config(page_title="AI Review Validator", layout="wide")
-
-# 1. Load Model
-@st.cache_resource
-def load_model():
-    return joblib.load("model/fake_review_model.pkl")
-
-try:
-    model, vectorizer = load_model()
-    c = make_pipeline(vectorizer, model)
-except Exception as e:
-    st.error(f"Model Load Error: {e}")
-
-st.title("🛡️ AI Review Integrity System")
-
-# 2. Session State for input
-if 'input_text' not in st.session_state:
-    st.session_state['input_text'] = ""
-
-def clear_text():
-    st.session_state['input_text'] = ""
-
-# Input UI
-review = st.text_area("Paste review here:", value=st.session_state['input_text'], height=150, key="review_area")
-
-col1, col2 = st.columns([1, 5])
-with col1:
-    analyze_btn = st.button("Analyze")
-with col2:
-    st.button("Clear Text", on_click=clear_text)
-
-# --- THE LOGIC BLOCK (Fixed Indentation) ---
-if analyze_btn:
-    if review:
-        # Processing starts exactly 8 spaces in (under the 'if review')
-        cleaned = clean_text(review)
-        prediction = model.predict(vectorizer.transform([cleaned]))[0]
-        probs = c.predict_proba([review])[0]
-        class_map = dict(zip(model.classes_, probs))
-
-        # HYBRID LOGIC: Check for repetition (Lexical Diversity)
-        words = cleaned.split()
-        unique_ratio = len(set(words)) / len(words) if len(words) > 0 else 1
-        
-        # Check if it should be forced to FAKE
-        is_fake = (prediction == "CG") or (unique_ratio < 0.5 and len(words) > 10)
-
-        st.divider()
-        if is_fake:
-            st.error("### 🚩 VERDICT: FAKE")
-            st.write(f"Reasoning: High repetition or bot-like patterns detected.")
-        else:
-            st.success("### ✅ VERDICT: REAL")
-            st.write(f"Reasoning: The text structure appears naturally human.")
-
-        # LIME Section
-       # --- ALIGNED LIME SECTION ---
+# --- LIME SECTION ---
         st.subheader("Visual Explanation")
         
-        # We need to find if 'CG' is index 0 or 1 to prevent contradiction
-        # Most sklearn models sort classes alphabetically: ['CG', 'OR']
-        # index 0 = CG (Fake), index 1 = OR (Real)
+        # We manually define the mapping to ensure the chart matches the verdict
+        # 0 = Fake (CG), 1 = Real (OR)
+        map_names = ['Fake (CG)', 'Real (OR)'] 
         
-        explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
+        explainer = LimeTextExplainer(class_names=map_names)
         
-        with st.spinner("Aligning explanation..."):
+        with st.spinner("Generating feature importance..."):
             exp = explainer.explain_instance(
                 review, 
                 c.predict_proba, 
                 num_features=10
             )
             
-            # --- CSS Fix for visibility ---
+            # CSS for Dark Mode visibility
             lime_html = exp.as_html()
             custom_css = """
             <style>
@@ -87,6 +24,5 @@ if analyze_btn:
                 body { background-color: #0e1117; }
             </style>
             """
-            components.html(custom_css + lime_html, height=600, scrolling=True))
-            
-            
+            # FIXED: Removed the extra ) at the end of this line
+            components.html(custom_css + lime_html, height=600, scrolling=True)
