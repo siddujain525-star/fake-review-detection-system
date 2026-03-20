@@ -40,57 +40,57 @@ with col2:
 # --- LOGIC BLOCK ---
 # --- LOGIC BLOCK ---
 # --- STRICTOR HYBRID LOGIC ---
+      if analyze_btn:
+    if review:
+        cleaned = clean_text(review)
+        
+        # 1. Get raw probabilities
+        probs = c.predict_proba([review])[0]
+        prediction_index = np.argmax(probs)
+        
+        # 2. Hybrid Logic: Repetition & Genericness
         words = cleaned.split()
         unique_ratio = len(set(words)) / len(words) if len(words) > 0 else 1
         
-        # New Rule: Check for "Empty" words (words that say nothing specific)
-        generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy']
-        generic_count = sum(1 for word in words if word in generic_words)
+        # Define common "filler" words that bots over-use
+        generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy', 'great']
+        generic_count = sum(1 for word in words if word.lower() in generic_words)
         generic_ratio = generic_count / len(words) if len(words) > 0 else 0
 
-        # FINAL VERDICT (Stricter)
-        # 1. If model says index 0 (Fake)
-        # 2. OR if uniqueness is low (< 55% unique words)
-        # 3. OR if more than 40% of the review is just generic "praise" words
+        # 3. Final Verdict Decision
+        # Thresholds: uniqueness < 55% OR more than 40% generic words
         is_fake = (prediction_index == 0) or (unique_ratio < 0.55) or (generic_ratio > 0.4)
 
         st.divider()
         if is_fake:
             st.error("### 🚩 VERDICT: FAKE")
-            st.write(f"**Reason:** High repetition ({unique_ratio:.2f}) or generic 'filler' language detected.")
+            st.write(f"**Analysis:** Machine-generated patterns or high repetition detected.")
+            st.info(f"**Metrics:** Uniqueness: {unique_ratio:.2f} | Generic Word Density: {generic_ratio:.2f}")
         else:
             st.success("### ✅ VERDICT: REAL")
-            st.write(f"**Reason:** Natural linguistic variety and specific vocabulary detected.")
+            st.write(f"**Analysis:** Natural linguistic variety and specific details detected.")
+            st.info(f"**System Confidence:** {probs[1]*100:.1f}%")
 
         # --- DARK THEME LIME SECTION ---
         st.subheader("Visual Explanation")
         map_names = ['Fake (CG)', 'Real (OR)'] 
         explainer = LimeTextExplainer(class_names=map_names)
         
-        with st.spinner("Generating dark-mode visual..."):
+        with st.spinner("Generating feature importance..."):
             exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
             lime_html = exp.as_html()
             
-            # This CSS forces the LIME internal HTML to be Dark Mode compatible
+            # CSS for Dark Mode visibility
             custom_css = """
             <style>
-                /* Force background to match Streamlit's dark theme */
                 body { background-color: #0e1117 !important; color: white !important; }
-                
-                /* Target LIME specific text elements */
                 .lime { color: white !important; }
-                text { fill: white !important; font-family: sans-serif !important; font-size: 14px !important; }
-                
-                /* Make the labels stand out */
+                text { fill: white !important; font-family: sans-serif !important; }
                 .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
-                
-                /* Ensure the horizontal bars are visible */
-                rect { stroke: #444 !important; }
             </style>
             """
-            
-            # Combine the CSS with the LIME HTML inside the component
             components.html(custom_css + lime_html, height=600, scrolling=True)
     else:
         st.warning("Please enter a review first!")
+
        
