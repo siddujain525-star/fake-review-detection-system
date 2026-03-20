@@ -50,4 +50,26 @@ if st.button("Analyze Review"):
             components.html(exp.as_html(), height=800, scrolling=True)
     else:
         st.warning("Please enter some text first.")
+        # --- LIME EXPLAINABILITY SECTION ---
+        st.subheader("Why did the AI choose this?")
+        
+        with st.spinner("Calculating word importance..."):
+            explainer = LimeTextExplainer(class_names=['Real', 'Fake'])
+            exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
+            
+            # --- CSS to fix the dark theme visibility ---
+            lime_html = exp.as_html()
+            custom_css = """
+            <style>
+                body { color: white !important; }
+                .lime.dist { color: white !important; }
+                .lime.label { color: #ffaa00 !important; font-weight: bold; }
+                text { fill: white !important; } /* Fixes SVG text in charts */
+                span { color: inherit !important; }
+            </style>
+            """
+            # Combine the CSS and the LIME HTML
+            final_html = custom_css + lime_html
+            
+            components.html(final_html, height=800, scrolling=True)
     
