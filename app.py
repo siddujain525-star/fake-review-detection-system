@@ -47,13 +47,23 @@ if analyze_btn and review:
     class_map = dict(zip(model.classes_, probs))
     
     # --- DISPLAY RESULT ---
+   # --- DISPLAY RESULT ---
     st.divider()
-    if prediction == "CG":
+    
+    # Dynamically find which keys exist in the map (handles 'CG', 'cg', 'OR', 'or', etc.)
+    fake_key = next((k for k in class_map if str(k).upper() == 'CG'), None)
+    real_key = next((k for k in class_map if str(k).upper() == 'OR'), None)
+
+    if prediction.upper() == "CG" and fake_key:
         st.error(f"### 🚩 VERDICT: FAKE")
-        st.write(f"The AI is **{class_map['CG']*100:.1f}%** sure this is machine-generated.")
-    else:
+        st.write(f"The AI is **{class_map[fake_key]*100:.1f}%** sure this is machine-generated.")
+    elif real_key:
         st.success(f"### ✅ VERDICT: REAL")
-        st.write(f"The AI is **{class_map['OR']*100:.1f}%** sure this is a genuine human review.")
+        st.write(f"The AI is **{class_map[real_key]*100:.1f}%** sure this is a genuine human review.")
+    else:
+        # Fallback if the labels are totally different (like 0 and 1)
+        st.info(f"### Result: {prediction}")
+        st.write(f"Confidence: {max(probs)*100:.1f}%"))
 
     # --- LIME SECTION ---
     st.subheader("Visual Explanation")
