@@ -38,9 +38,7 @@ with col2:
     st.button("Clear Text", on_click=clear_text)
 
 # --- LOGIC BLOCK ---
-# --- LOGIC BLOCK ---
-# --- STRICTOR HYBRID LOGIC ---
-      if analyze_btn:
+if analyze_btn:
     if review:
         cleaned = clean_text(review)
         
@@ -92,5 +90,3 @@ with col2:
             components.html(custom_css + lime_html, height=600, scrolling=True)
     else:
         st.warning("Please enter a review first!")
-
-       
