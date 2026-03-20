@@ -61,33 +61,32 @@ if analyze_btn:
             st.write(f"Reasoning: The text structure appears naturally human.")
 
         # LIME Section
-        # --- FIXED LIME SECTION ---
+       # --- ALIGNED LIME SECTION ---
         st.subheader("Visual Explanation")
         
-        # We manually define the mapping to ensure LIME doesn't guess
-        # Most models alphabetical: 0 = CG (Fake), 1 = OR (Real)
-        map_names = ['Fake (CG)', 'Real (OR)'] 
+        # We need to find if 'CG' is index 0 or 1 to prevent contradiction
+        # Most sklearn models sort classes alphabetically: ['CG', 'OR']
+        # index 0 = CG (Fake), index 1 = OR (Real)
         
-        explainer = LimeTextExplainer(class_names=map_names)
+        explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
         
-        with st.spinner("Generating feature importance..."):
+        with st.spinner("Aligning explanation..."):
             exp = explainer.explain_instance(
                 review, 
                 c.predict_proba, 
                 num_features=10
             )
             
-            # --- CSS to fix Dark Mode & Text Contrast ---
+            # --- CSS Fix for visibility ---
             lime_html = exp.as_html()
             custom_css = """
             <style>
-                /* Force all text inside the LIME iframe to be visible */
                 .lime { color: white !important; }
-                .med { color: white !important; }
-                text { fill: white !important; font-size: 12px !important; }
+                text { fill: white !important; }
                 .lime.label { color: #ffaa00 !important; font-weight: bold; }
-                /* Ensure the background of the chart is dark to match Streamlit */
                 body { background-color: #0e1117; }
             </style>
             """
-            components.html(custom_css + lime_html, height=600, scrolling=True)
+            components.html(custom_css + lime_html, height=600, scrolling=True))
+            
+            
