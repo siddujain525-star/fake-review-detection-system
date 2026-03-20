@@ -83,20 +83,40 @@ if analyze_btn:
                 st.info(f"**Reason:** Natural Language | AI Confidence: {probs[1]*100:.1f}%")
 
             # --- VISUAL EXPLANATION (LIME) ---
-            st.subheader("🔍 Visual Explanation")
-            with st.spinner("Generating feature importance..."):
-                explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
-                exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
-                lime_html = exp.as_html()
-                
-                # CSS for Dark Mode visibility
-                custom_css = """
-                <style>
-                    body { background-color: #0e1117 !important; color: white !important; }
-                    text { fill: white !important; font-family: sans-serif !important; }
-                    .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
-                </style>
-                """
-                components.html(custom_css + lime_html, height=450, scrolling=True)
+            # --- DARK THEME LIME FIX ---
+st.subheader("🔍 Visual Explanation")
+with st.spinner("Generating feature importance..."):
+    explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
+    exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
+    lime_html = exp.as_html()
+    
+    # This CSS forces the LIME internal containers to have light text and a readable background
+    improved_css = """
+    <style>
+        /* Force the main background and text color */
+        body, .lime { 
+            background-color: #0e1117 !important; 
+            color: #ffffff !important; 
+            font-family: sans-serif !important;
+        }
+        /* Fix the 'Text with highlighted words' visibility */
+        div { color: #ffffff !important; } 
+        p { color: #ffffff !important; }
+        b { color: #ffffff !important; }
+        
+        /* Ensure the chart labels (axis) are visible */
+        text { fill: #ffffff !important; font-size: 12px !important; }
+        
+        /* Make the highlighted word labels pop */
+        .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
+        
+        /* Fix scrollbar styling for dark mode */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #0e1117; }
+        ::-webkit-scrollbar-thumb { background: #31333f; border-radius: 5px; }
+    </style>
+    """
+    # Combine the CSS and the LIME HTML
+    components.html(improved_css + lime_html, height=500, scrolling=True)
     else:
         st.warning("Please enter a review first!")
