@@ -37,87 +37,66 @@ with col1:
 with col2:
     st.button("Clear Text", on_click=clear_text)
 
-# --- LOGIC BLOCK ---
+# --- START ANALYSIS ---
 if analyze_btn:
     if review:
         cleaned = clean_text(review)
-        
-        # 1. Get raw probabilities
-        probs = c.predict_proba([review])[0]
-        prediction_index = np.argmax(probs)
-        
-        # 2. Hybrid Logic: Repetition & Genericness
         words = cleaned.split()
-        unique_ratio = len(set(words)) / len(words) if len(words) > 0 else 1
         
-        # Define common "filler" words that bots over-use
-        generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy', 'great']
-        generic_count = sum(1 for word in words if word.lower() in generic_words)
-        generic_ratio = generic_count / len(words) if len(words) > 0 else 0
-
-        # 3. Final Verdict Decision
-        # Thresholds: uniqueness < 55% OR more than 40% generic words
-     # --- ULTRA-STRICT HYBRID LOGIC ---
-        words = cleaned.split()
-        unique_ratio = len(set(words)) / len(words) if len(words) > 0 else 1
-        
-        # 1. Generic Word Check (Filler language)
-        generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy', 'great', 'excellent', 'recommend']
-        generic_count = sum(1 for word in words if word.lower() in generic_words)
-        generic_ratio = generic_count / len(words) if len(words) > 0 else 0
-
-        # 2. "Fancy Word" Check (Average word length)
-        # Bots often have an avg length > 6.5 because they use words like 'unparalleled' or 'architectural'
-        avg_word_length = sum(len(word) for word in words) / len(words) if len(words) > 0 else 0
-
-        # --- THE FINAL VERDICT DECISION ---
-        # We flag as FAKE if:
-        # - Model says index 0
-        # - OR Uniqueness is low (< 65% - raised from 55%)
-        # - OR Generic Density is high (> 35% - lowered from 40%)
-        # - OR Avg word length is unusually high (> 6.8) suggesting a 'Thesaurus Bot'
-        
-        is_fake = (prediction_index == 0) or \
-                  (unique_ratio < 0.65) or \
-                  (generic_ratio > 0.35) or \
-                  (avg_word_length > 6.8)
-
-        st.divider()
-        if is_fake:
-            st.error("### 🚩 VERDICT: FAKE")
-            st.info(f"**Reason:** Pattern Mismatch | Uniqueness: {unique_ratio:.2f} | Avg Word Len: {avg_word_length:.1f}")
+        # Guard against empty/very short reviews
+        if len(words) == 0:
+            st.warning("Please enter a valid review with actual words.")
         else:
-            st.success("### ✅ VERDICT: REAL")
-            st.info(f"**Reason:** Natural Language | Confidence: {probs[1]*100:.1f}%")
-# Check for a mismatch
-if (prediction_index == 1) and is_fake:
-    st.warning("⚠️ **Heuristic Override Applied**")
-    st.write("""
-        The AI model was uncertain (leaning towards 'Real'), but the system 
-        flagged this as **FAKE** because the text failed our **Linguistic Safety Checks**:
-    """)
-    if unique_ratio < 0.65:
-        st.write(f"- 🚩 **Low Vocabulary Diversity:** (Score: {unique_ratio:.2f}) - The review is too repetitive.")
-    if generic_ratio > 0.35:
-        st.write(f"- 🚩 **High Generic Content:** (Score: {generic_ratio:.2f}) - Uses too many 'filler' praise words.")
-        # --- DARK THEME LIME SECTION ---
-        st.subheader("Visual Explanation")
-        map_names = ['Fake (CG)', 'Real (OR)'] 
-        explainer = LimeTextExplainer(class_names=map_names)
-        
-        with st.spinner("Generating feature importance..."):
-            exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
-            lime_html = exp.as_html()
+            # 1. Get raw probabilities
+            probs = c.predict_proba([review])[0]
+            prediction_index = np.argmax(probs)
             
-            # CSS for Dark Mode visibility
-            custom_css = """
-            <style>
-                body { background-color: #0e1117 !important; color: white !important; }
-                .lime { color: white !important; }
-                text { fill: white !important; font-family: sans-serif !important; }
-                .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
-            </style>
-            """
-            components.html(custom_css + lime_html, height=600, scrolling=True)
+            # 2. Hybrid Logic Calculations
+            unique_ratio = len(set(words)) / len(words)
+            generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy', 'great', 'excellent', 'recommend']
+            generic_count = sum(1 for word in words if word.lower() in generic_words)
+            generic_ratio = generic_count / len(words)
+            avg_word_length = sum(len(word) for word in words) / len(words)
+
+            # 3. Final Verdict Decision (The Safety Net)
+            is_fake = (prediction_index == 0) or \
+                      (unique_ratio < 0.65) or \
+                      (generic_ratio > 0.35) or \
+                      (avg_word_length > 6.8)
+
+            st.divider()
+
+            # --- DISPLAY VERDICT ---
+            if is_fake:
+                st.error("### 🚩 VERDICT: FAKE")
+                st.info(f"**Reason:** Pattern Mismatch | Uniqueness: {unique_ratio:.2f} | Avg Word Len: {avg_word_length:.1f}")
+                
+                # Show Heuristic Override warning if the AI was fooled
+                if prediction_index == 1:
+                    st.warning("⚠️ **Heuristic Override Applied**")
+                    st.write("The AI model leaned toward 'Real', but our safety checks flagged it:")
+                    if unique_ratio < 0.65: st.write(f"- 🚩 **Low Diversity:** ({unique_ratio:.2f})")
+                    if generic_ratio > 0.35: st.write(f"- 🚩 **High Generic Content:** ({generic_ratio:.2f})")
+                    if avg_word_length > 6.8: st.write(f"- 🚩 **Unnatural Word Length:** ({avg_word_length:.1f})")
+            else:
+                st.success("### ✅ VERDICT: REAL")
+                st.info(f"**Reason:** Natural Language | AI Confidence: {probs[1]*100:.1f}%")
+
+            # --- VISUAL EXPLANATION (LIME) ---
+            st.subheader("🔍 Visual Explanation")
+            with st.spinner("Generating feature importance..."):
+                explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
+                exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
+                lime_html = exp.as_html()
+                
+                # CSS for Dark Mode visibility
+                custom_css = """
+                <style>
+                    body { background-color: #0e1117 !important; color: white !important; }
+                    text { fill: white !important; font-family: sans-serif !important; }
+                    .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
+                </style>
+                """
+                components.html(custom_css + lime_html, height=450, scrolling=True)
     else:
         st.warning("Please enter a review first!")
