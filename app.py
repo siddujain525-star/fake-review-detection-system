@@ -72,4 +72,14 @@ if st.button("Analyze Review"):
             final_html = custom_css + lime_html
             
             components.html(final_html, height=800, scrolling=True)
+            # Get standard prediction
+        prediction = model.predict(vectorizer.transform([cleaned]))[0]
+        
+        # New Dataset Mapping: CG (Computer Generated) = FAKE, OR (Original) = REAL
+        if prediction == "CG":
+            label = "FAKE"
+            st.error(f"Analysis Result: {label}")
+        else:
+            label = "REAL"
+            st.success(f"Analysis Result: {label}")
     
