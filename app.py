@@ -1,85 +1,74 @@
 import streamlit as st
-import pickle
+import joblib  # Better for Random Forest
 from src.preprocess import clean_text
 from lime.lime_text import LimeTextExplainer
 import streamlit.components.v1 as components
 from sklearn.pipeline import make_pipeline
 
-st.set_page_config(page_title="Fake Review Detector", layout="wide")
-st.title("🔍 Fake Review Detection + Explainability")
+st.set_page_config(page_title="AI Review Validator", layout="wide")
 
-# 1. Load your model and vectorizer
+# 1. Load Model with Joblib
+@st.cache_resource
+def load_model():
+    # If you used pickle to save, change this back to pickle.load
+    return joblib.load("model/fake_review_model.pkl")
+
 try:
-    with open("model/fake_review_model.pkl", "rb") as f:
-        model, vectorizer = pickle.load(f)
+    model, vectorizer = load_model()
+    c = make_pipeline(vectorizer, model)
 except Exception as e:
-    st.error(f"Error loading model: {e}")
+    st.error(f"Upload your model to GitHub: {e}")
 
-# 2. Create a Pipeline for LIME
-c = make_pipeline(vectorizer, model)
+st.title("🛡️ AI Review Integrity System")
 
-# Add a "Clear" button using Session State
-if "review_input" not in st.session_state:
-    st.session_state.review_input = ""
+# 2. Session State for the Clear Button
+if 'input_text' not in st.session_state:
+    st.session_state['input_text'] = ""
 
 def clear_text():
-    st.session_state.review_input = ""
+    st.session_state['input_text'] = ""
 
-review = st.text_area("Enter Review to Analyze", value=st.session_state.review_input, height=150, key="review_text")
+# The text area is linked to session_state
+review = st.text_area("Paste review here:", value=st.session_state['input_text'], height=150, key="review_area")
 
-col1, col2 = st.columns([1, 6])
+col1, col2 = st.columns([1, 5])
 with col1:
-    submit = st.button("Analyze")
+    analyze_btn = st.button("Analyze")
 with col2:
-    st.button("Clear", on_click=clear_text)
+    st.button("Clear Text", on_click=clear_text)
 
-if submit:
-    if st.session_state.review_text:
-        # --- PREDICTION LOGIC ---
-        cleaned = clean_text(st.session_state.review_text)
-        
-        # Get raw prediction
-        raw_prediction = model.predict(vectorizer.transform([cleaned]))[0]
-        
-        # Get Confidence
-        probs = c.predict_proba([st.session_state.review_text])[0]
-        # Assuming class 0 is OR and class 1 is CG based on alphabetical order
-        # We'll calculate confidence based on the winning side
-        confidence = max(probs) * 100
+if analyze_btn and review:
+    # --- PROCESSSING ---
+    cleaned = clean_text(review)
+    prediction = model.predict(vectorizer.transform([cleaned]))[0]
+    probs = c.predict_proba([review])[0]
+    
+    # Map probabilities to classes
+    class_map = dict(zip(model.classes_, probs))
+    
+    # --- DISPLAY RESULT ---
+    st.divider()
+    if prediction == "CG":
+        st.error(f"### 🚩 VERDICT: FAKE")
+        st.write(f"The AI is **{class_map['CG']*100:.1f}%** sure this is machine-generated.")
+    else:
+        st.success(f"### ✅ VERDICT: REAL")
+        st.write(f"The AI is **{class_map['OR']*100:.1f}%** sure this is a genuine human review.")
 
-        # Mapping: CG (Computer Generated) = FAKE, OR (Original) = REAL
-        if raw_prediction == "CG":
-            st.error(f"VERDICT: FAKE (Confidence: {confidence:.2f}%)")
-        else:
-            st.success(f"VERDICT: REAL (Confidence: {confidence:.2f}%)")
-            
-        # DEBUG: Remove this later, but helps us see if labels are flipped
-        st.write(f"DEBUG: Model predicted raw value: {raw_prediction}")
+    # --- LIME SECTION ---
+    st.subheader("Visual Explanation")
+    explainer = LimeTextExplainer(class_names=model.classes_)
+    exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
+    
+    # Dark Mode CSS Fix
+    custom_css = """
+    <style>
+        * { color: white !important; }
+        text { fill: white !important; }
+        .lime.label { color: #ffaa00 !important; font-weight: bold; }
+    </style>
+    """
+    components.html(custom_css + exp.as_html(), height=600, scrolling=True)
 
-       # --- LIME EXPLAINABILITY SECTION ---
-        st.subheader("Why did the AI choose this?")
-        
-        with st.spinner("Calculating word importance..."):
-            # We pull the actual class order from the model itself
-            class_names = model.classes_ # This will likely be ['CG', 'OR'] or ['OR', 'CG']
-            
-            explainer = LimeTextExplainer(class_names=class_names)
-            
-            # Use the original text (not cleaned) for better LIME visualization
-            exp = explainer.explain_instance(
-                st.session_state.review_text, 
-                c.predict_proba, 
-                num_features=10
-            )
-            
-            # CSS for visibility
-            lime_html = exp.as_html()
-            custom_css = """
-            <style>
-                * { color: white !important; }
-                text { fill: white !important; } 
-                .lime.label { color: #ffaa00 !important; font-weight: bold; }
-            </style>
-            """
-            components.html(custom_css + lime_html, height=800, scrolling=True)
-        st.warning("Please enter text first.")
+elif analyze_btn and not review:
+    st.warning("Please enter a review first!")
