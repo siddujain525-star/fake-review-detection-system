@@ -9,55 +9,64 @@ st.set_page_config(page_title="Fake Review Detector", layout="wide")
 st.title("🔍 Fake Review Detection + Explainability")
 
 # 1. Load your model and vectorizer
-# Ensure these files are in the 'model/' folder on GitHub
-with open("model/fake_review_model.pkl", "rb") as f:
-    model, vectorizer = pickle.load(f)
+try:
+    with open("model/fake_review_model.pkl", "rb") as f:
+        model, vectorizer = pickle.load(f)
+except Exception as e:
+    st.error(f"Error loading model: {e}")
 
 # 2. Create a Pipeline for LIME
-# This tells LIME how to process raw text through your vectorizer then the model
 c = make_pipeline(vectorizer, model)
 
-review = st.text_area("Enter Review to Analyze", height=150)
+# Add a "Clear" button using Session State
+if "review_input" not in st.session_state:
+    st.session_state.review_input = ""
 
-if st.button("Analyze Review"):
-    if review:
+def clear_text():
+    st.session_state.review_input = ""
+
+review = st.text_area("Enter Review to Analyze", value=st.session_state.review_input, height=150, key="review_text")
+
+col1, col2 = st.columns([1, 6])
+with col1:
+    submit = st.button("Analyze")
+with col2:
+    st.button("Clear", on_click=clear_text)
+
+if submit:
+    if st.session_state.review_text:
         # --- PREDICTION LOGIC ---
-        cleaned = clean_text(review)
-        prediction = model.predict(vectorizer.transform([cleaned]))[0]
+        cleaned = clean_text(st.session_state.review_text)
         
-        # New Dataset Mapping: CG (Computer Generated) = FAKE, OR (Original) = REAL
-        if prediction == "CG":
-            label = "FAKE"
-            st.error(f"Analysis Result: {label}")
+        # Get raw prediction
+        raw_prediction = model.predict(vectorizer.transform([cleaned]))[0]
+        
+        # Get Confidence
+        probs = c.predict_proba([st.session_state.review_text])[0]
+        # Assuming class 0 is OR and class 1 is CG based on alphabetical order
+        # We'll calculate confidence based on the winning side
+        confidence = max(probs) * 100
+
+        # Mapping: CG (Computer Generated) = FAKE, OR (Original) = REAL
+        if raw_prediction == "CG":
+            st.error(f"VERDICT: FAKE (Confidence: {confidence:.2f}%)")
         else:
-            label = "REAL"
-            st.success(f"Analysis Result: {label}")
+            st.success(f"VERDICT: REAL (Confidence: {confidence:.2f}%)")
+            
+        # DEBUG: Remove this later, but helps us see if labels are flipped
+        st.write(f"DEBUG: Model predicted raw value: {raw_prediction}")
 
         # --- LIME EXPLAINABILITY SECTION ---
         st.subheader("Why did the AI choose this?")
         
         with st.spinner("Calculating word importance..."):
-            # We use ['OR', 'CG'] to match your model's internal labels
+            # Use the actual internal labels
             explainer = LimeTextExplainer(class_names=['OR', 'CG'])
+            exp = explainer.explain_instance(st.session_state.review_text, c.predict_proba, num_features=10)
             
-            exp = explainer.explain_instance(
-                review, 
-                c.predict_proba, 
-                num_features=10
-            )
-            
-            # --- CSS to fix dark theme visibility ---
+            # CSS for Dark Mode
             lime_html = exp.as_html()
-            custom_css = """
-            <style>
-                * { color: white !important; }
-                text { fill: white !important; } /* Fixes the chart text */
-                .lime.label { color: #ffaa00 !important; font-weight: bold; }
-                body { background-color: #0e1117; }
-            </style>
-            """
-            final_html = custom_css + lime_html
-            components.html(final_html, height=800, scrolling=True)
-            
+            custom_css = "<style>* { color: white !important; } text { fill: white !important; } .lime.label { color: #ffaa00 !important; font-weight: bold; }</style>"
+            components.html(custom_css + lime_html, height=800, scrolling=True)
     else:
-        st.warning("Please enter some text first.")
+        st.warning("Please enter text first.")
