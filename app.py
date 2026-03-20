@@ -61,11 +61,33 @@ if analyze_btn:
             st.write(f"Reasoning: The text structure appears naturally human.")
 
         # LIME Section
+        # --- FIXED LIME SECTION ---
         st.subheader("Visual Explanation")
-        explainer = LimeTextExplainer(class_names=model.classes_)
-        exp = explainer.explain_instance(review, c.predict_proba, num_features=10)
         
-        custom_css = "<style>* { color: white !important; } text { fill: white !important; }</style>"
-        components.html(custom_css + exp.as_html(), height=600, scrolling=True)
-    else:
-        st.warning("Please enter a review first!")
+        # We manually define the mapping to ensure LIME doesn't guess
+        # Most models alphabetical: 0 = CG (Fake), 1 = OR (Real)
+        map_names = ['Fake (CG)', 'Real (OR)'] 
+        
+        explainer = LimeTextExplainer(class_names=map_names)
+        
+        with st.spinner("Generating feature importance..."):
+            exp = explainer.explain_instance(
+                review, 
+                c.predict_proba, 
+                num_features=10
+            )
+            
+            # --- CSS to fix Dark Mode & Text Contrast ---
+            lime_html = exp.as_html()
+            custom_css = """
+            <style>
+                /* Force all text inside the LIME iframe to be visible */
+                .lime { color: white !important; }
+                .med { color: white !important; }
+                text { fill: white !important; font-size: 12px !important; }
+                .lime.label { color: #ffaa00 !important; font-weight: bold; }
+                /* Ensure the background of the chart is dark to match Streamlit */
+                body { background-color: #0e1117; }
+            </style>
+            """
+            components.html(custom_css + lime_html, height=600, scrolling=True)
