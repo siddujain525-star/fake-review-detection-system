@@ -66,7 +66,7 @@ if analyze_btn:
 
             st.divider()
 
-            # --- DISPLAY VERDICT ---
+            #  DISPLAY VERDICT 
             if is_fake:
                 st.error("### 🚩 VERDICT: FAKE")
                 st.info(f"**Reason:** Pattern Mismatch | Uniqueness: {unique_ratio:.2f} | Avg Word Len: {avg_word_length:.1f}")
@@ -81,7 +81,7 @@ if analyze_btn:
                 st.success("### ✅ VERDICT: REAL")
                 st.info(f"**Reason:** Natural Language | AI Confidence: {probs[1]*100:.1f}%")
 
-            # --- VISUAL EXPLANATION (LIME) ---
+            #  VISUAL EXPLANATION (LIME)
             st.subheader("🔍 Visual Explanation")
             with st.spinner("Generating feature importance..."):
                 explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
