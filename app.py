@@ -53,7 +53,7 @@ if analyze_btn:
             
             # 2. Hybrid Logic Calculations
             unique_ratio = len(set(words)) / len(words)
-            generic_words = ['product', 'amazing', 'good', 'best', 'quality', 'item', 'buy', 'great', 'excellent', 'recommend']
+            generic_words = []
             generic_count = sum(1 for word in words if word.lower() in generic_words)
             generic_ratio = generic_count / len(words)
             avg_word_length = sum(len(word) for word in words) / len(words)
