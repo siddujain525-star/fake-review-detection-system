@@ -81,7 +81,7 @@ if analyze_btn:
                 st.success("### ✅ VERDICT: REAL")
                 st.info(f"**Reason:** Natural Language | AI Confidence: {probs[1]*100:.1f}%")
 
-            #  VISUAL EXPLANATION (LIME)
+            #  VISUAL EXPLANATION (LIME) local interpretable mobel agnostic explanation )
             st.subheader("🔍 Visual Explanation")
             with st.spinner("Generating feature importance..."):
                 explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
