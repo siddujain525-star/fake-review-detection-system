@@ -129,23 +129,61 @@ with tab1:
     with col2:
         st.button("Clear Text", on_click=clear_text)
 
+# --- TAB 2: Aggregated Analysis ---
 with tab2:
-    st.subheader("Live Amazon Product Analysis")
+    st.subheader("🌐 Live Amazon Product Analysis")
     product_url = st.text_input("Paste an Amazon Product URL here:")
 
     if st.button("Extract & Analyze Reviews", key="url_btn"):
         if product_url:
-            with st.spinner("Scraping reviews..."):
+            with st.spinner("Scraping and analyzing all reviews..."):
                 reviews = scrape_amazon_reviews(product_url)
             
             if not reviews:
-                st.error("Could not extract reviews. URL might be invalid or blocked.")
+                st.error("Could not extract reviews.")
             else:
-                st.success(f"Successfully extracted {len(reviews)} reviews!")
+                # 1. Initialize Counters
+                total_reviews = len(reviews)
+                real_count = 0
+                fake_count = 0
+                
+                # 2. Run batch analysis (Silent)
+                for review_text in reviews:
+                    cleaned = clean_text(review_text)
+                    probs = c.predict_proba([cleaned])[0]
+                    prediction_index = np.argmax(probs)
+                    
+                    # We use your same logic here
+                    if prediction_index == 1: # Real
+                        real_count += 1
+                    else:
+                        fake_count += 1
+
+                # 3. DISPLAY GENERAL ANALYSIS DASHBOARD
+                real_percentage = (real_count / total_reviews) * 100
+                
+                st.divider()
+                st.header("📊 Final Product Integrity Report")
+                
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Reviews", total_reviews)
+                col2.metric("Real Reviews ✅", real_count)
+                col3.metric("Generated Reviews 🚩", fake_count)
+
+                # 4. THE "BUY OR NOT" VERDICT
+                if real_percentage >= 70:
+                    st.success(f"### 🛍️ VERDICT: SAFE TO BUY")
+                    st.write(f"**{real_percentage:.1f}%** of reviews appear genuine. This product has high human engagement.")
+                elif 40 <= real_percentage < 70:
+                    st.warning("### ⚠️ VERDICT: PROCEED WITH CAUTION")
+                    st.write(f"Only **{real_percentage:.1f}%** of reviews are verified as real. Some feedback may be manipulated.")
+                else:
+                    st.error("### 🚫 VERDICT: DO NOT BUY")
+                    st.write(f"**{fake_count} out of {total_reviews}** reviews look AI-generated. The rating is likely inflated.")
+
+                st.divider()
+                st.subheader("📑 Individual Review Breakdown")
+                # Now show the original dropdowns below the summary
                 for i, review_text in enumerate(reviews):
-                    with st.expander(f"Review {i+1}: {review_text[:60]}..."):
-                        st.write(review_text)
-                        st.divider()
+                    with st.expander(f"Review {i+1} Details"):
                         run_analysis(review_text)
-        else:
-            st.warning("Please enter a URL first.")
