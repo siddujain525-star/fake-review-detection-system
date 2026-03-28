@@ -148,42 +148,59 @@ with tab2:
                 fake_count = 0
                 
                 # 2. Run batch analysis (Silent)
+                # --- TAB 2: Aggregated Analysis with 5-Star Rating ---
+with tab2:
+    st.subheader("🌐 Live Amazon Product Analysis")
+    product_url = st.text_input("Paste an Amazon Product URL here:")
+
+    if st.button("Extract & Analyze Reviews", key="url_btn"):
+        if product_url:
+            with st.spinner("Scraping and analyzing..."):
+                reviews = scrape_amazon_reviews(product_url)
+            
+            if not reviews:
+                st.error("Could not extract reviews.")
+            else:
+                real_count = 0
+                total_reviews = len(reviews)
+                
+                # Run the model on every review
                 for review_text in reviews:
                     cleaned = clean_text(review_text)
                     probs = c.predict_proba([cleaned])[0]
-                    prediction_index = np.argmax(probs)
-                    
-                    # We use your same logic here
-                    if prediction_index == 1: # Real
+                    if np.argmax(probs) == 1: # 1 is Real
                         real_count += 1
-                    else:
-                        fake_count += 1
-
-                # 3. DISPLAY GENERAL ANALYSIS DASHBOARD
-                real_percentage = (real_count / total_reviews) * 100
+                
+                # --- CALCULATE OVERALL AI RATING ---
+                # Logic: Percentage of Real Reviews converted to 5-star scale
+                real_ratio = real_count / total_reviews
+                ai_star_rating = real_ratio * 5
                 
                 st.divider()
-                st.header("📊 Final Product Integrity Report")
+                st.header("🛡️ AI Product Integrity Report")
                 
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Total Reviews", total_reviews)
-                col2.metric("Real Reviews ✅", real_count)
-                col3.metric("Generated Reviews 🚩", fake_count)
+                # Display the Big Star Rating
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.metric("Overall AI Rating", f"{ai_star_rating:.1f} / 5")
+                with col2:
+                    # Visual Star Display
+                    stars = "⭐" * int(round(ai_star_rating))
+                    st.subheader(f"Rating: {stars}")
 
-                # 4. THE "BUY OR NOT" VERDICT
-                if real_percentage >= 70:
-                    st.success(f"### 🛍️ VERDICT: SAFE TO BUY")
-                    st.write(f"**{real_percentage:.1f}%** of reviews appear genuine. This product has high human engagement.")
-                elif 40 <= real_percentage < 70:
-                    st.warning("### ⚠️ VERDICT: PROCEED WITH CAUTION")
-                    st.write(f"Only **{real_percentage:.1f}%** of reviews are verified as real. Some feedback may be manipulated.")
+                # --- THE "BUY" VERDICT BASED ON STARS ---
+                if ai_star_rating >= 4.0:
+                    st.success("### ✅ VERDICT: HIGH INTEGRITY")
+                    st.write("Most reviews are genuine. This is a safe choice.")
+                elif 2.5 <= ai_star_rating < 4.0:
+                    st.warning("### ⚠️ VERDICT: MIXED SIGNALS")
+                    st.write("A significant number of reviews look generated. Read carefully.")
                 else:
-                    st.error("### 🚫 VERDICT: DO NOT BUY")
-                    st.write(f"**{fake_count} out of {total_reviews}** reviews look AI-generated. The rating is likely inflated.")
+                    st.error("### 🚫 VERDICT: UNTRUSTWORTHY")
+                    st.write("Low integrity score. Most reviews appear to be AI-generated/Fake.")
 
-                st.divider()
-                st.subheader("📑 Individual Review Breakdown")
-                # Now show the original dropdowns below the summary
-                for i, review_text in enumerate(reviews):
-                    with st.expander(f"Review {i+1} Details"):
-                        run_analysis(review_text)
+                # Show the breakdown cards
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Total Analyzed", total_reviews)
+                c2.metric("Real Found", real_count)
+                c3.metric("Fakes Flagged", total_reviews - real_count)
