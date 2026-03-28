@@ -1,6 +1,19 @@
 import time
 from playwright.sync_api import sync_playwright
+import os
+import subprocess
 
+def scrape_amazon_reviews(url, max_reviews=50):
+    # --- ADD THIS START ---
+    # This checks if the browser is installed; if not, it installs it on the server
+    try:
+        subprocess.run(["playwright", "install", "chromium"], check=True)
+    except Exception as e:
+        print(f"Playwright install note: {e}")
+    # --- ADD THIS END ---
+
+    with sync_playwright() as p:
+        # rest of your code...
 def scrape_amazon_reviews(url, max_reviews=50):
     with sync_playwright() as p:
         # 1. Launch Browser (Stealthy)
