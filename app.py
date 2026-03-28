@@ -84,16 +84,7 @@ def run_analysis(review_text):
         </style>
         """
         components.html(improved_css + lime_html, height=500, scrolling=True)
-        # DARK THEME VISIBILITY FIX
-        improved_css = """
-        <style>
-            body, .lime { background-color: #0e1117 !important; color: #ffffff !important; }
-            div, p, b { color: #ffffff !important; } 
-            text { fill: #ffffff !important; font-size: 12px !important; }
-            .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
-        </style>
-        """
-        components.html(improved_css + lime_html, height=500, scrolling=True)
+        
 
 
 # --- UI LAYOUT TABS ---
