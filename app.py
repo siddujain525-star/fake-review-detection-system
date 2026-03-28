@@ -34,7 +34,8 @@ def run_analysis(review_text):
         return
 
     # 1. Get raw probabilities
-    probs = c.predict_proba([review_text])[0]
+   # 1. Get raw probabilities
+    probs = c.predict_proba([cleaned])[0]
     prediction_index = np.argmax(probs)
     
     # 2. Hybrid Logic Calculations
@@ -66,11 +67,9 @@ def run_analysis(review_text):
         st.info(f"**Reason:** Natural Language | AI Confidence: {probs[1]*100:.1f}%")
 
     #  VISUAL EXPLANATION (LIME) 
-    st.subheader("🔍 Visual Explanation")
     with st.spinner("Generating feature importance..."):
         explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
-        exp = explainer.explain_instance(review_text, c.predict_proba, num_features=10)
-        lime_html = exp.as_html()
+        exp = explainer.explain_instance(cleaned, c.predict_proba, num_features=10)
         
         # DARK THEME VISIBILITY FIX
         improved_css = """
