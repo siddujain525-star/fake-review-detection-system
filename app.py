@@ -117,17 +117,17 @@ with tab2:
         if product_url:
             with st.spinner("Detecting site and fetching reviews..."):
                 # SITE DETECTION LOGIC
-                if "flipkart.com" in product_url:
-                    from scraper_test import scrape_flipkart_reviews
-                    reviews = scrape_flipkart_reviews(product_url)
-                    site_name = "Flipkart"
-                elif "amazon" in product_url:
-                    # Uses your existing Amazon function
-                    reviews = scrape_amazon_reviews(product_url)
-                    site_name = "Amazon"
-                else:
-                    st.error("Platform not supported. Please use an Amazon or Flipkart link.")
-                    reviews = None
+                # --- UPDATED SITE DETECTION ---
+if "flipkart.com" in product_url or "fkrt.it" in product_url:
+    from scraper_test import scrape_flipkart_reviews
+    reviews = scrape_flipkart_reviews(product_url)
+    site_name = "Flipkart"
+elif "amazon" in product_url or "amzn.in" in product_url:
+    reviews = scrape_amazon_reviews(product_url)
+    site_name = "Amazon"
+else:
+    st.error("Platform not supported. Please use an Amazon or Flipkart link.")
+    reviews = None
 
             if reviews:
                 st.info(f"Source Detected: **{site_name}** | Reviews Found: {len(reviews)}")
