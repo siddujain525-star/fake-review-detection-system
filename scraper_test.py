@@ -1,32 +1,46 @@
-import platform
+import time
 from playwright.sync_api import sync_playwright
 
-def scrape_amazon_reviews(url):
-    """Scrapes reviews from an Amazon product URL and returns them as a list."""
-    scraped_reviews = []
-    
+def scrape_amazon_reviews(url, max_reviews=50):
     with sync_playwright() as p:
-        # 1. Check if we are on Streamlit Cloud (Linux) or local computer (Windows/Mac)
-        if platform.system() == "Linux":
-            # Use the OS-level Chromium we installed via packages.txt
-            browser = p.chromium.launch(headless=True, executable_path="/usr/bin/chromium")
-        else:
-            # Use Playwright's default browser for local testing
-            browser = p.chromium.launch(headless=True) 
-            
-        page = browser.new_page()
+        # 1. Launch Browser (Stealthy)
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_context(user_agent="Mozilla/5.0...").new_page()
         
+        # 2. Go to Product Page
+        page.goto(url)
+        time.sleep(2)
+
+        # 3. Click "See all reviews" to get more than just the Top 8
         try:
-            page.goto(url)
-            page.wait_for_selector('[data-hook="review-body"]', timeout=8000)
+            all_reviews_link = page.query_selector("a[data-hook='see-all-reviews-link-foot']")
+            if all_reviews_link:
+                all_reviews_link.click()
+                page.wait_for_load_state("networkidle")
+        except:
+            pass # Stay on main page if link isn't found
+
+        reviews = []
+        
+        # 4. Loop through pages until we hit max_reviews
+        while len(reviews) < max_reviews:
+            # Find all review bodies on current page
+            elements = page.query_selector_all("[data-hook='review-body']")
+            for el in elements:
+                text = el.inner_text().strip()
+                if text and text not in reviews:
+                    reviews.append(text)
+                if len(reviews) >= max_reviews:
+                    break
             
-            raw_reviews = page.locator('[data-hook="review-body"]').all_inner_texts()
-            scraped_reviews = [rev.strip() for rev in raw_reviews if rev.strip()]
-            
-        except Exception as e:
-            print(f"Scraping failed: {e}")
-            
-        finally:
-            browser.close()
-            
-    return scraped_reviews
+            # Try to click "Next Page"
+            next_button = page.query_selector("li.a-last a")
+            if next_button and len(reviews) < max_reviews:
+                next_button.click()
+                page.wait_for_load_state("networkidle")
+                time.sleep(1) # Small delay to avoid bot detection
+            else:
+                break # No more pages
+
+        browser.close()
+        return reviews[:max_reviews]
