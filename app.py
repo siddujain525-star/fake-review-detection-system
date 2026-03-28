@@ -27,9 +27,47 @@ def run_analysis(review_text):
     cleaned = clean_text(review_text)
     words = cleaned.split()
     
+ # --- REUSABLE ANALYSIS FUNCTION WITH DEBUG ---
+def run_analysis(review_text):
+    cleaned = clean_text(review_text)
+    words = cleaned.split()
+    
     if len(words) == 0:
         st.warning("Please enter a valid review with actual words.")
         return
+
+    # 1. Get raw probabilities
+    probs = c.predict_proba([cleaned])[0]
+    prediction_index = np.argmax(probs)
+    ai_confidence = probs[1] * 100
+    
+    # 2. Hybrid Logic Calculations
+    unique_ratio = len(set(words)) / len(words)
+    avg_word_length = sum(len(word) for word in words) / len(words) if len(words) > 0 else 0
+
+    # 3. Final Verdict Decision
+    # We only flag if the AI says it's fake OR if it's extremely repetitive
+    is_fake = (prediction_index == 0) or (unique_ratio < 0.15)
+
+    # --- DEBUG DASHBOARD ---
+    with st.expander("📊 Technical Analysis (Why is this Fake/Real?)"):
+        col1, col2, col3 = st.columns(3)
+        col1.metric("AI Real Confidence", f"{ai_confidence:.1f}%")
+        col2.metric("Uniqueness Score", f"{unique_ratio:.2f}")
+        col3.metric("Avg Word Length", f"{avg_word_length:.1f}")
+        
+        if prediction_index == 0:
+            st.write("🤖 **AI Verdict:** This text patterns match Computer-Generated (CG) reviews.")
+        else:
+            st.write("🤖 **AI Verdict:** This text patterns match Original (OR) reviews.")
+
+    # DISPLAY VERDICT 
+    if is_fake:
+        st.error("### 🚩 VERDICT: FAKE")
+        if prediction_index == 1 and unique_ratio < 0.15:
+            st.warning("⚠️ **Heuristic Override:** The AI thought this was real, but the text is too repetitive (Low Uniqueness).")
+    else:
+        st.success("### ✅ VERDICT: REAL")
 
     # 1. Get raw probabilities
     probs = c.predict_proba([cleaned])[0]
