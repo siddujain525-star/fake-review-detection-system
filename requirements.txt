@@ -1,8 +1,8 @@
-streamlit>=1.31.0
-altair<5.0.0
+streamlit
+joblib
+numpy
 pandas
 scikit-learn
-nltk
 lime
 playwright
-playwright==1.42.0
+nltk
