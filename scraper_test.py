@@ -1,3 +1,9 @@
+import os
+os.system("playwright install chromium")
+
+from playwright.sync_api import sync_playwright
+
+# ... the rest of your function stays exactly the same ...
 from playwright.sync_api import sync_playwright
 
 def scrape_amazon_reviews(url):
