@@ -87,25 +87,28 @@ def run_analysis(review_text):
 tab1, tab2 = st.tabs(["📝 Manual Input Analysis", "🌐 Live Product Review Analysis"])
 
 # TAB 1: Manual Check
+# --- TAB 1: Manual Check ---
 with tab1:
     st.subheader("Analyze a Single Review")
-    if 'input_text' not in st.session_state:
-        st.session_state['input_text'] = ""
-
-    def clear_text():
-        st.session_state['input_text'] = ""
-
-    manual_review = st.text_area("Paste review here:", value=st.session_state['input_text'], height=150, key="manual_area")
+    manual_review = st.text_area("Paste review here:", height=150, key="manual_area")
 
     col1, col2 = st.columns([1, 5])
+    
+    # Create a flag to trigger analysis
+    run_btn = False
+    
     with col1:
         if st.button("Analyze", key="manual_btn"):
-            if manual_review:
-                run_analysis(manual_review)
-            else:
-                st.warning("Please enter a review first!")
+            run_btn = True
     with col2:
         st.button("Clear Text", on_click=clear_text, key="clear_btn")
+
+    # FIX: Call the analysis OUTSIDE of the columns so it uses full width
+    if run_btn:
+        if manual_review:
+            run_analysis(manual_review)
+        else:
+            st.warning("Please enter a review first!")
 
 # TAB 2: Live Scraper + 5-Star Rating
 with tab2:
