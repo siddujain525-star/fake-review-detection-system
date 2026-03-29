@@ -21,7 +21,7 @@ try:
 except Exception as e:
     st.error(f"Model Load Error: {e}. Ensure 'model/fake_review_model.pkl' exists.")
 
-st.title("🛡️ AI Review Integrity System")
+st.title("🛡️ AI Review Analysis System")
 
 # --- REUSABLE ANALYSIS FUNCTION ---
 def run_analysis(review_text):
@@ -84,7 +84,7 @@ def run_analysis(review_text):
         components.html(improved_css + lime_html, height=450, scrolling=True)
 
 # --- UI LAYOUT TABS ---
-tab1, tab2 = st.tabs(["📝 Manual Input", "🌐 Live Amazon Scraper"])
+tab1, tab2 = st.tabs(["📝 Manual Input Analysis", "🌐 Live Product Review Analysis"])
 
 # TAB 1: Manual Check
 with tab1:
