@@ -109,7 +109,7 @@ with tab1:
 
 # TAB 2: Live Scraper + 5-Star Rating
 with tab2:
-    st.subheader("🌐 Live Amazon Product Analysis")
+    st.subheader("🌐 Live Product Review Analysis")
     # Added unique key to fix DuplicateElementId
     product_url = st.text_input("Paste an Amazon Product URL here:", key="scraper_url_input")
 
