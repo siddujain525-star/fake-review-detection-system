@@ -12,7 +12,7 @@ st.set_page_config(page_title="AI Review Validator", layout="wide")
 # 1. Load Model
 @st.cache_resource
 def load_model():
-    return joblib.load("model/fake_review_model.pkl")
+return joblib.load("model/fake_review_model.pkl")
 
 try:
     model, vectorizer = load_model()
