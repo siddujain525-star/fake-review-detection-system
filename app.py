@@ -23,7 +23,6 @@ except Exception as e:
 st.title("🛡️ AI Review Integrity System")
 
 # --- REUSABLE ANALYSIS FUNCTION ---
-# Added key_suffix to prevent DuplicateElementId errors
 def run_analysis(review_text, key_suffix=""):
     cleaned = clean_text(review_text)
     words = cleaned.split()
@@ -41,7 +40,7 @@ def run_analysis(review_text, key_suffix=""):
     avg_word_length = sum(len(word) for word in words) / len(words) if len(words) > 0 else 0
     is_fake = (prediction_index == 0) or (unique_ratio < 0.15) or (avg_word_length > 10)
 
-    # UI Metrics
+    # UI Metrics Layout
     col1, col2, col3 = st.columns(3)
     col1.metric("AI Real Confidence", f"{ai_confidence:.1f}%")
     col2.metric("Uniqueness Score", f"{unique_ratio:.2f}")
@@ -52,14 +51,26 @@ def run_analysis(review_text, key_suffix=""):
     else:
         st.success("### ✅ VERDICT: REAL")
 
-    # 2. Visual Explanation (ONLY on demand for speed)
-    if st.button(f"🔍 Show AI Reasoning (LIME)", key=f"lime_btn_{key_suffix}"):
-        with st.spinner("Generating feature importance..."):
-            explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
-            exp = explainer.explain_instance(cleaned, c.predict_proba, num_features=10)
-            
-            improved_css = "<style>body { background-color: #0e1117; color: white; }</style>"
-            components.html(improved_css + exp.as_html(), height=450, scrolling=True)
+    # 2. Direct Visual Explanation (No Button)
+    st.write("🔍 **Visual Reasoning (LIME)**")
+    
+    # We reduce num_samples for speed when rendering multiple reviews
+    explainer = LimeTextExplainer(class_names=['Fake', 'Real'])
+    exp = explainer.explain_instance(
+        cleaned, 
+        c.predict_proba, 
+        num_features=6, 
+        num_samples=200 # Reduced from 5000 for faster loading
+    )
+    
+    # CSS to force full width and fix dark mode visibility
+    improved_css = """
+    <style>
+        body { background-color: #0e1117; color: white; width: 100%; }
+        .lime { width: 100% !important; display: block; }
+    </style>
+    """
+    components.html(improved_css + exp.as_html(), height=350, scrolling=False)
 
 # --- UI LAYOUT TABS ---
 tab1, tab2 = st.tabs(["📝 Manual Input", "🌐 Live Amazon Scraper"])
@@ -67,6 +78,8 @@ tab1, tab2 = st.tabs(["📝 Manual Input", "🌐 Live Amazon Scraper"])
 with tab1:
     st.subheader("Analyze a Single Review")
     manual_review = st.text_area("Paste review here:", height=150, key="manual_area")
+    
+    # Analyze outside of a column to avoid squashed UI
     if st.button("Analyze", key="manual_btn"):
         if manual_review:
             run_analysis(manual_review, key_suffix="manual")
@@ -83,16 +96,14 @@ with tab2:
             if not reviews:
                 st.error("Could not extract reviews. Please try a full URL.")
             else:
-                # 1. Calculate Summary Stats first
                 real_count = 0
                 for r_text in reviews:
-                    cleaned = clean_text(r_text)
-                    if np.argmax(c.predict_proba([cleaned])[0]) == 1:
+                    cleaned_r = clean_text(r_text)
+                    if np.argmax(c.predict_proba([cleaned_r])[0]) == 1:
                         real_count += 1
                 
                 ai_star_rating = (real_count / len(reviews)) * 5
                 
-                # 2. Dashboard Header
                 st.divider()
                 st.header("🛡️ AI Product Integrity Report")
                 c_stars, c_metrics = st.columns([1, 2])
@@ -103,14 +114,13 @@ with tab2:
                 with c_metrics:
                     m1, m2, m3 = st.columns(3)
                     m1.metric("Total Reviews", len(reviews))
-                    m2.metric("Real Found", real_count)
-                    m3.metric("Fakes Flagged", len(reviews) - real_count)
+                    m2.metric("Real", real_count)
+                    m3.metric("Fake", len(reviews) - real_count)
 
-                # 3. Individual List
                 st.divider()
-                st.subheader("📑 Individual Review Details")
+                st.subheader("📑 Detailed Review Breakdown")
                 for i, r_text in enumerate(reviews):
-                    with st.expander(f"Review {i+1} Details"):
-                        st.write(r_text)
-                        # Pass unique key to sub-analysis
+                    # Setting expanded=False so LIME only loads when the user opens the box
+                    with st.expander(f"Review {i+1} Details", expanded=False):
+                        st.write(f"**Text:** {r_text}")
                         run_analysis(r_text, key_suffix=f"scrape_{i}")
