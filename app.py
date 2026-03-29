@@ -111,7 +111,7 @@ with tab1:
 with tab2:
     st.subheader("🌐 Live Product Review Analysis")
     # Added unique key to fix DuplicateElementId
-    product_url = st.text_input("Paste an Amazon Product URL here:", key="scraper_url_input")
+    product_url = st.text_input("Paste an  Product URL here:", key="scraper_url_input")
 
     if st.button("Extract & Analyze Reviews", key="url_btn"):
         if product_url:
