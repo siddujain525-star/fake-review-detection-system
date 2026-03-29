@@ -1,4 +1,4 @@
-from scraper_test import scrape_amazon_reviews
+from scraper_test import scrape_amazon_reviews, scrape_flipkart_reviews
 import streamlit as st
 import joblib
 import numpy as np
@@ -7,9 +7,10 @@ from lime.lime_text import LimeTextExplainer
 import streamlit.components.v1 as components
 from sklearn.pipeline import make_pipeline
 
+# 1. Page Config
 st.set_page_config(page_title="AI Review Analyser", layout="wide")
 
-# 1. Load Model
+# 2. Load Model
 @st.cache_resource
 def load_model():
     # Ensure this matches your filename on GitHub exactly
@@ -24,169 +25,138 @@ except Exception as e:
 st.title("🛡️ AI Review Analysis System")
 
 # --- REUSABLE ANALYSIS FUNCTION ---
-def run_analysis(review_text):
+def run_analysis(review_text, key_suffix=""):
     cleaned = clean_text(review_text)
     words = cleaned.split()
     
     if len(words) == 0:
-        st.warning("Please enter a valid review with actual words.")
+        st.warning("Please enter a valid review.")
         return
 
-    # 1. Get raw probabilities
+    # 1. Prediction logic
     probs = c.predict_proba([cleaned])[0]
     prediction_index = np.argmax(probs)
     ai_confidence = probs[1] * 100
     
-    # 2. Hybrid Logic Calculations
     unique_ratio = len(set(words)) / len(words)
     avg_word_length = sum(len(word) for word in words) / len(words) if len(words) > 0 else 0
-
-    # 3. Final Verdict Decision (AI + Heuristics)
     is_fake = (prediction_index == 0) or (unique_ratio < 0.15) or (avg_word_length > 10)
 
-    # --- DEBUG DASHBOARD ---
-    with st.expander("📊 Technical Analysis (Why is this Fake/Real?)"):
+    # UI Metrics Dashboard
+    with st.expander(f"📊 Technical Analysis Metrics", expanded=True):
         col1, col2, col3 = st.columns(3)
         col1.metric("AI Real Confidence", f"{ai_confidence:.1f}%")
         col2.metric("Uniqueness Score", f"{unique_ratio:.2f}")
         col3.metric("Avg Word Length", f"{avg_word_length:.1f}")
-        
-        if prediction_index == 0:
-            st.write("🤖 **AI Verdict:** This text matches patterns of Computer-Generated (CG) reviews.")
-        else:
-            st.write("🤖 **AI Verdict:** This text matches patterns of Original (OR) reviews.")
 
-    # DISPLAY VERDICT 
     if is_fake:
         st.error("### 🚩 VERDICT: FAKE")
         if prediction_index == 1:
-            st.warning("⚠️ **Heuristic Override Applied**")
-            st.write("The AI leaned toward 'Real', but safety checks flagged it for repetition or length.")
+            st.warning("⚠️ **Heuristic Override Applied:** High repetition or unusual word length detected.")
     else:
         st.success("### ✅ VERDICT: REAL")
-        st.info(f"**Reason:** Natural Language | AI Confidence: {ai_confidence:.1f}%")
 
-    # VISUAL EXPLANATION (LIME) 
-    st.subheader("🔍 Visual Explanation")
-    with st.spinner("Generating feature importance..."):
-        explainer = LimeTextExplainer(class_names=['Fake (CG)', 'Real (OR)'])
-        exp = explainer.explain_instance(cleaned, c.predict_proba, num_features=10)
-        lime_html = exp.as_html()
-        
-        improved_css = """
-        <style>
-            body, .lime { background-color: #0e1117 !important; color: #ffffff !important; }
-            div, p, b { color: #ffffff !important; } 
-            text { fill: #ffffff !important; font-size: 12px !important; }
-            .lime.label { color: #ffaa00 !important; font-weight: bold !important; }
-        </style>
-        """
-        components.html(improved_css + lime_html, height=450, scrolling=True)
+    # 2. Visual Explanation (On-demand to save resources)
+    if st.button(f"🔍 Show AI Reasoning (LIME)", key=f"lime_btn_{key_suffix}"):
+        with st.spinner("Generating feature importance..."):
+            explainer = LimeTextExplainer(class_names=['Fake', 'Real'])
+            exp = explainer.explain_instance(cleaned, c.predict_proba, num_features=10)
+            
+            # CSS to fix dark mode visibility
+            improved_css = "<style>body { background-color: #0e1117; color: white; width: 100%; }</style>"
+            components.html(improved_css + exp.as_html(), height=450, scrolling=True)
 
 # --- UI LAYOUT TABS ---
 tab1, tab2 = st.tabs(["📝 Manual Input Analysis", "🌐 Live Product Review Analysis"])
 
-# TAB 1: Manual Check
-# --- TAB 1: Manual Check ---
+# TAB 1: Manual Input
 with tab1:
-
     st.subheader("Analyze a Single Review")
-
+    
     if 'input_text' not in st.session_state:
-
         st.session_state['input_text'] = ""
-
-
 
     def clear_text():
-
         st.session_state['input_text'] = ""
-
-
 
     manual_review = st.text_area("Paste review here:", value=st.session_state['input_text'], height=150, key="manual_area")
 
-
-
-    col1, col2 = st.columns([1, 5])
-
-    with col1:
-
+    col_btn1, col_btn2 = st.columns([1, 5])
+    analyze_clicked = False
+    with col_btn1:
         if st.button("Analyze", key="manual_btn"):
-
-            if manual_review:
-
-                run_analysis(manual_review)
-
-            else:
-
-                st.warning("Please enter a review first!")
-
-    with col2:
-
+            analyze_clicked = True
+    with col_btn2:
         st.button("Clear Text", on_click=clear_text, key="clear_btn")
 
-# TAB 2: Live Scraper + 5-Star Rating
+    # Result appears below columns to prevent "squashed" UI
+    if analyze_clicked:
+        if manual_review:
+            run_analysis(manual_review, key_suffix="manual")
+        else:
+            st.warning("Please enter a review first!")
+
+# TAB 2: Live Scraper
 with tab2:
     st.subheader("🌐 Live Product Review Analysis")
-    # Added unique key to fix DuplicateElementId
-    product_url = st.text_input("Paste an  Product URL here:", key="scraper_url_input")
+    product_url = st.text_input("Paste Amazon or Flipkart Product URL:", key="scraper_url_input")
 
     if st.button("Extract & Analyze Reviews", key="url_btn"):
         if product_url:
-            with st.spinner("Scraping and analyzing..."):
-                reviews = scrape_amazon_reviews(product_url)
-            
-            if not reviews:
-                st.error("Could not extract reviews. Please try a full URL.")
-            else:
+            with st.spinner("Scraping and detecting source..."):
+                # URL Detection Logic
+                if "flipkart.com" in product_url or "fkrt.it" in product_url:
+                    reviews = scrape_flipkart_reviews(product_url)
+                    site_name = "Flipkart"
+                elif "amazon" in product_url or "amzn.in" in product_url:
+                    reviews = scrape_amazon_reviews(product_url)
+                    site_name = "Amazon"
+                else:
+                    st.error("Platform not supported. Use Amazon or Flipkart.")
+                    reviews = None
+
+            if reviews:
                 real_count = 0
                 total_reviews = len(reviews)
                 
-                # Analyze all scraped reviews
-                for review_text in reviews:
-                    cleaned = clean_text(review_text)
-                    probs = c.predict_proba([cleaned])[0]
-                    if np.argmax(probs) == 1: # 1 is Real
+                # Batch processing for the Dashboard
+                for r_text in reviews:
+                    cleaned_r = clean_text(r_text)
+                    if np.argmax(c.predict_proba([cleaned_r])[0]) == 1:
                         real_count += 1
                 
-                # --- CALCULATE OVERALL AI RATING ---
-                real_ratio = real_count / total_reviews
-                ai_star_rating = real_ratio * 5
+                ai_star_rating = (real_count / total_reviews) * 5
                 
+                # Integrity Dashboard
                 st.divider()
-                st.header("🛡️ AI Product Integrity Report")
-                
-                col_stars, col_metrics = st.columns([1, 2])
-                with col_stars:
-                    st.metric("Overall AI Rating", f"{ai_star_rating:.1f} / 5")
-                    stars_visual = "⭐" * int(round(ai_star_rating))
-                    if not stars_visual: stars_visual = "🌑"
-                    st.subheader(f"{stars_visual}")
+                st.header(f"🛡️ {site_name} Integrity Report")
+                c_stars, c_metrics = st.columns([1, 2])
+                with c_stars:
+                    st.metric("Overall AI Trust Rating", f"{ai_star_rating:.1f} / 5")
+                    stars = "⭐" * int(round(ai_star_rating)) if ai_star_rating > 0 else "🌑"
+                    st.subheader(stars)
 
-                with col_metrics:
-                    # Breakdown
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Total Reviews", total_reviews)
-                    c2.metric("Real Found", real_count)
-                    c3.metric("Fakes Flagged", total_reviews - real_count)
+                with c_metrics:
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Total Reviews", total_reviews)
+                    m2.metric("Real Found", real_count)
+                    m3.metric("Fakes Flagged", total_reviews - real_count)
 
-                # --- THE VERDICT ---
+                # Summary Verdict
                 if ai_star_rating >= 4.0:
-                    st.success("### ✅ VERDICT: HIGH INTEGRITY")
-                    st.write("The vast majority of reviews are genuine.")
-                elif 2.5 <= ai_star_rating < 4.0:
-                    st.warning("### ⚠️ VERDICT: MIXED SIGNALS")
-                    st.write("Caution: Some reviews look manipulated or generated.")
+                    st.success("### ✅ VERDICT: HIGH INTEGRITY PRODUCT")
+                elif ai_star_rating >= 2.5:
+                    st.warning("### ⚠️ VERDICT: MIXED SIGNALS / CAUTION")
                 else:
-                    st.error("### 🚫 VERDICT: UNTRUSTWORTHY")
-                    st.write("Heavy presence of suspected fake reviews.")
+                    st.error("### 🚫 VERDICT: UNTRUSTWORTHY / HIGH RISK")
 
+                # Detailed List
                 st.divider()
-                st.subheader("📑 Individual Review Details")
+                st.subheader("📑 Detailed Review Breakdown")
                 for i, r_text in enumerate(reviews):
                     with st.expander(f"Review {i+1} Details"):
                         st.write(r_text)
-                        run_analysis(r_text)
+                        # Pass unique key suffix for each review in the loop
+                        run_analysis(r_text, key_suffix=f"scrape_{i}")
         else:
             st.warning("Please enter a URL first.")
