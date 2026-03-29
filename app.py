@@ -12,13 +12,13 @@ st.set_page_config(page_title="AI Review Validator", layout="wide")
 # 1. Load Model
 @st.cache_resource
 def load_model():
-return joblib.load("model/fake_review_model.pkl")
+    return joblib.load("model/fake_review_model.pkl")
 
 try:
-    model, vectorizer = load_model()
-    c = make_pipeline(vectorizer, model)
+    model, vectorizer = load_model()
+    c = make_pipeline(vectorizer, model)
 except Exception as e:
-    st.error(f"Model Load Error: {e}. Ensure 'model/fake_review_model.pkl' exists.")
+    st.error(f"Model Load Error: {e}. Ensure 'model/fake_review_model.pkl' exists.")
 
 st.title("🛡️ AI Review Integrity System")
 
