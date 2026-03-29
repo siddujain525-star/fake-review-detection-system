@@ -7,7 +7,7 @@ from lime.lime_text import LimeTextExplainer
 import streamlit.components.v1 as components
 from sklearn.pipeline import make_pipeline
 
-st.set_page_config(page_title="AI Review Validator", layout="wide")
+st.set_page_config(page_title="AI Review Analyser", layout="wide")
 
 # 1. Load Model
 @st.cache_resource
