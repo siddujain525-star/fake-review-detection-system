@@ -1,18 +1,36 @@
- AI Review Integrity System
-An AIML-based system designed to detect Machine-Generated (CG) vs. Original (OR) reviews using **Random Forest** and **LIME** (Local Interpretable Model-agnostic Explanations).
+🛡️ Fake Review Detection System
+An AI-powered solution to identify deceptive consumer reviews using Natural Language Processing (NLP).
 
-##  Features
-* **Hybrid Detection:** Combines ML predictions with Heuristic Lexical Analysis (Uniqueness & Generic Word Density).
-* **Explainable AI (XAI):** Integrated LIME charts to show *why* a review was flagged.
+📖 Overview
+In the era of e-commerce, fake reviews (opinion spam) significantly influence consumer behavior and brand reputation. This project implements a machine learning pipeline to classify reviews as Genuine or Fake by analyzing linguistic patterns, sentiment extremes, and metadata inconsistencies.
 
-##  Tech Stack
-* **Language:** Python
-* **ML Framework:** Scikit-Learn (Random Forest + TF-IDF)
-* **Explanation:** LIME
-* **UI:** Streamlit
+🚀 Features
+Real-time Classification: Input a review text and get an instant credibility score.
 
-##  Logic Metrics
-The system evaluates reviews based on:
-1.  **ML Confidence:** Raw probability from the Random Forest model.
-2.  **Lexical Diversity:** Ratio of unique words to total words.
-3.  **Generic Density:** Percentage of "filler" marketing praise words.
+Linguistic Analysis: Detects "over-the-top" sentiment, excessive use of pronouns, and repetitive phrasing.
+
+User-Friendly Dashboard: Built with [Streamlit/Flask] for easy interaction.
+
+Pre-processed Datasets: Utilizes cleaned versions of the [mention dataset, e.g., Yelp or Amazon Gold Standard] dataset.
+
+🛠️ Tech Stack
+Language: Python 3.x
+
+Libraries: * Scikit-learn (Model building)
+
+NLTK / Spacy (NLP & Text Preprocessing)
+
+Pandas & NumPy (Data Manipulation)
+
+Tast/Streamlit (Web Interface)
+
+Vectorization: TF-IDF / Word2Vec / CountVectorizer
+
+📊 Methodology
+Data Preprocessing: Removal of stopwords, punctuation, and lemmatization.
+
+Feature Engineering: Extracting text length, punctuation density, and sentiment polarity.
+
+Model Selection: Comparison between Multinomial Naive Bayes, Logistic Regression, and [Your chosen model, e.g., Random Forest/SVM].
+
+Evaluation: Achieving an accuracy of XX% [update this] with high precision to avoid flagging real customers.
