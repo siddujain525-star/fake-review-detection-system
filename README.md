@@ -11,7 +11,7 @@ Linguistic Analysis: Detects "over-the-top" sentiment, excessive use of pronouns
 
 User-Friendly Dashboard: Built with [Streamlit/Flask] for easy interaction.
 
-Pre-processed Datasets: Utilizes cleaned versions of the [mention dataset, e.g., Yelp or Amazon Gold Standard] dataset.
+Pre-processed Datasets: Utilizes cleaned versions of the [ Amazon Gold Standard] dataset.
 
 🛠️ Tech Stack
 Language: Python 3.x
@@ -31,6 +31,6 @@ Data Preprocessing: Removal of stopwords, punctuation, and lemmatization.
 
 Feature Engineering: Extracting text length, punctuation density, and sentiment polarity.
 
-Model Selection: Comparison between Multinomial Naive Bayes, Logistic Regression, and [Your chosen model, e.g., Random Forest/SVM].
+Model Selection: Comparison between Multinomial Naive Bayes, Logistic Regression, and [Random Forest].
 
-Evaluation: Achieving an accuracy of XX% [update this] with high precision to avoid flagging real customers.
+Evaluation: Achieving an accuracy of 79.09 with high precision to avoid flagging real customers.
