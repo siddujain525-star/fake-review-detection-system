@@ -1,45 +1,32 @@
-
+import streamlit as st  # MUST BE AT THE TOP
 import sys
 import os
-import streamlit as st  # <--- THIS MUST BE HERE
-
-# 1. Path and Browser Logic
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
-
-@st.cache_resource
-def install_browser():
-    os.system("playwright install chromium")
-
-install_browser()
-
-# ... rest of your imports (asyncio, joblib, etc.)
-
-# 1. FIX: Correct path addition to find the 'src' folder
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
-
-# 2. FIX: Install Playwright browser only once
-@st.cache_resource
-def install_browser():
-    os.system("playwright install chromium")
-
-install_browser()
+import asyncio
 import warnings
 import joblib
 import numpy as np
-import streamlit as st
-import streamlit.components.v1 as components
-from sklearn.pipeline import make_pipeline
-from lime.lime_text import LimeTextExplainer
 
-# Internal imports from your project
+# --- 1. CLOUD ENVIRONMENT SETUP ---
+# Correct path addition to find the 'src' folder and scraper
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+# Install Playwright browser binaries for Streamlit Cloud
+@st.cache_resource
+def install_browser():
+    os.system("playwright install chromium")
+
+install_browser()
+
+# --- 2. ADDITIONAL IMPORTS ---
 from src.preprocess import clean_text
 from scraper_test import scrape_amazon_reviews, search_amazon, search_flipkart
+from lime.lime_text import LimeTextExplainer
+import streamlit.components.v1 as components
+from sklearn.pipeline import make_pipeline
 
-# FIX: Force Windows to use the correct Asyncio loop
+# FIX: Force Windows to use the correct Asyncio loop (if running locally)
 if sys.platform == "win32":
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -50,9 +37,10 @@ if sys.platform == "win32":
 
 st.set_page_config(page_title="AI Review Integrity System", layout="wide")
 
-# --- 1. MODEL LOADING ---
+# --- 3. MODEL LOADING ---
 @st.cache_resource
 def load_model():
+    # Ensure this matches your filename on GitHub exactly
     return joblib.load("model/fake_review_model.pkl")
 
 try:
@@ -61,7 +49,7 @@ try:
 except Exception as e:
     st.error(f"Model Load Error: {e}. Ensure 'model/fake_review_model.pkl' exists.")
 
-# --- 2. CORE INNOVATION: WSC ENGINE LOGIC ---
+# --- 4. CORE INNOVATION: WSC ENGINE LOGIC ---
 def calculate_sabotage_risk(text, probs):
     """
     Implements the Weighted Sabotage Calculation (WSC).
@@ -84,14 +72,17 @@ def calculate_sabotage_risk(text, probs):
     
     adjusted_score = max(0, base_confidence - penalty)
     
+    # Logic: Flag as sabotage if adjusted score is low OR keyword density is high
+    is_sabotage = (adjusted_score < 0.5) or (redirection_score + defamatory_score > 2)
+    
     return {
         "adjusted_score": adjusted_score,
         "redirection_found": redirection_score > 0,
         "defamation_found": defamatory_score > 0,
-        "is_sabotage": adjusted_score < 0.5 or (redirection_score + defamatory_score > 2)
+        "is_sabotage": is_sabotage
     }
 
-# --- 3. REUSABLE ANALYSIS FUNCTION ---
+# --- 5. REUSABLE ANALYSIS FUNCTION ---
 def run_analysis(review_text):
     cleaned = clean_text(review_text)
     words = cleaned.split()
@@ -100,13 +91,13 @@ def run_analysis(review_text):
         st.warning("Please enter a valid review.")
         return
 
-    # 1. AI Base Prediction
+    # AI Base Prediction
     probs = c.predict_proba([cleaned])[0]
     
-    # 2. Apply WSC Engine
+    # Apply WSC Engine
     wsc_results = calculate_sabotage_risk(cleaned, probs)
     
-    # 3. Final Verdict Decision
+    # Final Verdict Decision
     is_fake = wsc_results["is_sabotage"] or (np.argmax(probs) == 0)
 
     # --- TECHNICAL BREAKDOWN ---
@@ -117,9 +108,9 @@ def run_analysis(review_text):
         col3.metric("Defamation Risk", "High" if wsc_results["defamation_found"] else "Low")
         
         if wsc_results["redirection_found"]:
-            st.info("🚩 **Market Redirection Detected:** Linguistic patterns suggest steering toward competitors.")
+            st.info("🚩 **Market Redirection:** Suggests steering toward competitors.")
         if wsc_results["defamation_found"]:
-            st.info("🚩 **Defamatory Language Detected:** High frequency of hostile/malicious phrasing.")
+            st.info("🚩 **Defamatory Language:** Hostile or malicious phrasing detected.")
 
     # DISPLAY VERDICT 
     if is_fake:
@@ -129,43 +120,46 @@ def run_analysis(review_text):
 
     # XAI (LIME) 
     st.subheader("💡 Linguistic Feature Explanation (XAI)")
-    explainer = LimeTextExplainer(class_names=['Malicious/Fake', 'Genuine'])
-    exp = explainer.explain_instance(cleaned, c.predict_proba, num_features=8)
-    components.html(exp.as_html(), height=350, scrolling=True)
+    with st.spinner("Generating explanation..."):
+        explainer = LimeTextExplainer(class_names=['Malicious/Fake', 'Genuine'])
+        exp = explainer.explain_instance(cleaned, c.predict_proba, num_features=8)
+        components.html(exp.as_html(), height=350, scrolling=True)
 
-# --- 4. STREAMLIT UI LAYOUT ---
+# --- 6. STREAMLIT UI LAYOUT ---
 st.title("🛡️ AI Product Integrity Dashboard")
 st.markdown("---")
 
 tab1, tab2, tab3 = st.tabs(["📝 Manual Analysis", "🌐 Amazon URL Scraper", "⚖️ Cross-Platform Search"])
 
-# (Tab 1, 2, and 3 logic remains similar to your original, 
-# but calls the updated run_analysis with the WSC integration)
-
+# TAB 1: Manual Check
 with tab1:
+    st.subheader("Analyze a Single Review")
     manual_review = st.text_area("Paste review here:", height=150)
     if st.button("Analyze Intent"):
-        if manual_review: run_analysis(manual_review)
+        if manual_review:
+            run_analysis(manual_review)
+        else:
+            st.warning("Please enter a review first!")
 
+# TAB 2: Live Amazon Scraper
 with tab2:
     st.subheader("🌐 Amazon Product Integrity Report")
     product_url = st.text_input("Paste Amazon Product URL:", placeholder="https://www.amazon.in/dp/...")
 
-    if st.button("Generate Integrity Report", key="gen_report_btn"):
+    if st.button("Generate Integrity Report"):
         if not product_url:
-            st.warning("Please provide a valid URL first.")
+            st.warning("Please provide a URL.")
         else:
             with st.spinner("🕵️ AI is investigating product reviews..."):
                 reviews = scrape_amazon_reviews(product_url)
                 
                 if not reviews:
-                    st.error("Could not extract reviews. The product may have no reviews or the scraper was blocked.")
+                    st.error("Extraction failed. The scraper may be blocked or URL is invalid.")
                 else:
                     total = len(reviews)
                     genuine_count = 0
                     sabotage_count = 0
                     
-                    # Process and categorize reviews
                     for r in reviews:
                         cleaned_r = clean_text(r)
                         if cleaned_r.strip():
@@ -176,45 +170,64 @@ with tab2:
                             else:
                                 sabotage_count += 1
 
-                    # --- 1. THE RECALIBRATED RATING ---
+                    # Recalibrated Rating Section
                     st.divider()
                     col_rating, col_stats = st.columns([1, 2])
                     
                     with col_rating:
-                        # Logic: Genuine ratio determines the new star rating
                         trust_ratio = genuine_count / total
                         final_score = trust_ratio * 5
-                        
                         st.metric("Adjusted Trust Rating", f"{final_score:.1f} / 5.0")
-                        stars_visual = "⭐" * int(round(final_score)) if final_score >= 0.5 else "🌑"
-                        st.subheader(stars_visual)
+                        st.subheader("⭐" * int(round(final_score)) if final_score >= 0.5 else "🌑")
                         
-                        # Quick Verdict Badge
-                        if final_score >= 4.0:
-                            st.success("✅ HIGH INTEGRITY")
-                        elif final_score >= 2.5:
-                            st.warning("⚠️ CAUTION: MIXED")
-                        else:
-                            st.error("🚩 UNTRUSTWORTHY")
+                        if final_score >= 4.0: st.success("✅ HIGH INTEGRITY")
+                        elif final_score >= 2.5: st.warning("⚠️ CAUTION: MIXED")
+                        else: st.error("🚩 UNTRUSTWORTHY")
 
                     with col_stats:
-                        # Visual Breakdown Metrics
                         c1, c2, c3 = st.columns(3)
-                        c1.metric("Total Analyzed", total)
+                        c1.metric("Analyzed", total)
                         c2.metric("Genuine", genuine_count)
-                        c3.metric("Sabotage/Fake", sabotage_count)
-                        
-                        # Integrity Progress Bar
+                        c3.metric("Fakes", sabotage_count)
                         st.write("**Overall Marketplace Authenticity:**")
                         st.progress(trust_ratio)
 
-                    # --- 2. THE DETAILED BREAKDOWN ---
                     st.divider()
                     st.subheader("📑 Top Review Investigations")
                     st.write("Below is a breakdown of the first 5 reviews analyzed for this product.")
+                    
+                    for i, r_text in enumerate(reviews[:5]):
+                        with st.expander(f"Review #{i+1} Investigation Details"):
+                            run_analysis(r_text)
 
+# TAB 3: Cross-Platform Search
 with tab3:
-    p_name = st.text_input("Product Name:")
-    if st.button("Compare Market Integrity"):
-        # Your Cross-Platform scraping logic here
-        st.info("Comparing Amazon vs Flipkart integrity signatures...")
+    st.title("🛡️ Cross-Platform Review Integrity")
+    product_name = st.text_input("Enter Product Name (e.g., iPhone 15)")
+
+    if st.button("Run Multi-Site Analysis"):
+        with st.spinner(f"Searching Amazon & Flipkart for '{product_name}'..."):
+            amz_reviews = search_amazon(product_name, max_reviews=15)
+            flp_reviews = search_flipkart(product_name, max_reviews=15)
+            
+            col_amz, col_flp = st.columns(2)
+            
+            with col_amz:
+                st.header("📦 Amazon India")
+                if amz_reviews:
+                    real = sum(1 for r in amz_reviews if not calculate_sabotage_risk(r, c.predict_proba([clean_text(r)])[0])["is_sabotage"])
+                    score = (real / len(amz_reviews)) * 100
+                    st.metric("Integrity Score", f"{score:.1f}%")
+                    st.write(f"**{real}** / {len(amz_reviews)} genuine.")
+                else:
+                    st.warning("No Amazon reviews found.")
+
+            with col_flp:
+                st.header("🛒 Flipkart")
+                if flp_reviews:
+                    real = sum(1 for r in flp_reviews if not calculate_sabotage_risk(r, c.predict_proba([clean_text(r)])[0])["is_sabotage"])
+                    score = (real / len(flp_reviews)) * 100
+                    st.metric("Integrity Score", f"{score:.1f}%")
+                    st.write(f"**{real}** / {len(flp_reviews)} genuine.")
+                else:
+                    st.warning("No Flipkart reviews found.")
