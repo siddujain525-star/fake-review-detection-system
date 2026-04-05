@@ -196,7 +196,7 @@ with tab2:
                     # --- 2. THE DETAILED BREAKDOWN ---
                     st.divider()
                     st.subheader("📑 Top Review Investigations")
-                    st.write("Below is a breakdown of the first
+                    st.write("Below is a breakdown of the first 5 reviews analyzed for this product.")
 
 with tab3:
     p_name = st.text_input("Product Name:")
