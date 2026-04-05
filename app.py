@@ -56,6 +56,7 @@ except Exception as e:
 st.title("🛡️ AI Review Analysis System")
 
 # --- REUSABLE ANALYSIS FUNCTION ---
+# --- REUSABLE ANALYSIS FUNCTION ---
 def run_analysis(review_text):
     cleaned = clean_text(review_text)
     words = cleaned.split()
@@ -83,31 +84,34 @@ def run_analysis(review_text):
         col2.metric("Uniqueness Score", f"{unique_ratio:.2f}")
         col3.metric("Avg Word Length", f"{avg_word_length:.1f}")
         
-        if prediction_index == 0:
-            st.write("🤖 **AI Verdict:** Detected patterns of Computer-Generated (CG) reviews.")
-        else:
-            st.write("🤖 **AI Verdict:** Detected patterns of Original (OR) reviews.")
-
     # --- DISPLAY VERDICT & INTENTION ---
     if is_fake:
         st.error("### 🚩 VERDICT: FAKE / UNTRUSTWORTHY")
         
-        # New Sabotage Logic Integration
-        is_sabotage, reasons, score = detect_sabotage(review_text)
+        # UPDATE THIS LINE: It now expects 4 variables
+        is_sabotage, reasons, score, explanation = detect_sabotage(review_text)
         
         if is_sabotage:
             st.warning(f"⚠️ **INTENTION: MALICIOUS SABOTAGE** (Confidence: {score}%)")
-            st.write(f"**Reasoning:** {', '.join(reasons)}")
-            st.caption("This review appears to be a targeted attack or competitor promotion.")
+            
+            # --- ADDED EXPLANATION BOX ---
+            with st.expander("🔍 Detailed Sabotage Explanation"):
+                st.write("### Why was this flagged?")
+                st.markdown(explanation)
+                st.info("Intent: This review shows patterns of a targeted attack or competitor interference.")
+            # ---------------------------
         else:
             st.info("ℹ️ **INTENTION: GENERIC SPAM**")
-            st.write("This review likely lacks substance or is an automated bot post, but no direct malicious sabotage was detected.")
+            st.write("This review appears to be automated or low-quality, but no specific sabotage intent was found.")
 
         if prediction_index == 1:
-            st.caption("⚠️ *Heuristic Override:* AI thought this was 'Real', but flagged it for low uniqueness or odd word lengths.")
+            st.caption("⚠️ *Heuristic Override:* AI thought this was 'Real', but safety checks flagged it.")
     else:
         st.success("### ✅ VERDICT: REAL")
         st.info(f"**Reason:** Natural Language Patterns | AI Confidence: {ai_confidence:.1f}%")
+
+    # --- LIME VISUAL EXPLANATION ---
+    # (Keep your existing LIME code here...)
 
     # --- LIME VISUAL EXPLANATION ---
     st.subheader("🔍 Visual Word Importance")
