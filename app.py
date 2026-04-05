@@ -133,26 +133,70 @@ with tab1:
         if manual_review: run_analysis(manual_review)
 
 with tab2:
-    product_url = st.text_input("Amazon URL:")
-    if st.button("Generate Integrity Report"):
-        with st.spinner("Extracting..."):
-            reviews = scrape_amazon_reviews(product_url)
-            if reviews:
-                total = len(reviews)
-                genuine = 0
-                for r in reviews:
-                    probs = c.predict_proba([clean_text(r)])[0]
-                    res = calculate_sabotage_risk(r, probs)
-                    if not res["is_sabotage"]: genuine += 1
+    st.subheader("🌐 Amazon Product Integrity Report")
+    product_url = st.text_input("Paste Amazon Product URL:", placeholder="https://www.amazon.in/dp/...")
+
+    if st.button("Generate Integrity Report", key="gen_report_btn"):
+        if not product_url:
+            st.warning("Please provide a valid URL first.")
+        else:
+            with st.spinner("🕵️ AI is investigating product reviews..."):
+                reviews = scrape_amazon_reviews(product_url)
                 
-                # Adjusted Star Rating
-                final_score = (genuine / total) * 5
-                st.metric("Trust-Based Star Rating", f"{final_score:.1f} / 5.0")
-                st.write("⭐" * int(round(final_score)))
-                
-                for i, r in enumerate(reviews[:5]): # Show first 5
-                    with st.expander(f"Review {i+1}"):
-                        run_analysis(r)
+                if not reviews:
+                    st.error("Could not extract reviews. The product may have no reviews or the scraper was blocked.")
+                else:
+                    total = len(reviews)
+                    genuine_count = 0
+                    sabotage_count = 0
+                    
+                    # Process and categorize reviews
+                    for r in reviews:
+                        cleaned_r = clean_text(r)
+                        if cleaned_r.strip():
+                            probs = c.predict_proba([cleaned_r])[0]
+                            res = calculate_sabotage_risk(r, probs)
+                            if not res["is_sabotage"]:
+                                genuine_count += 1
+                            else:
+                                sabotage_count += 1
+
+                    # --- 1. THE RECALIBRATED RATING ---
+                    st.divider()
+                    col_rating, col_stats = st.columns([1, 2])
+                    
+                    with col_rating:
+                        # Logic: Genuine ratio determines the new star rating
+                        trust_ratio = genuine_count / total
+                        final_score = trust_ratio * 5
+                        
+                        st.metric("Adjusted Trust Rating", f"{final_score:.1f} / 5.0")
+                        stars_visual = "⭐" * int(round(final_score)) if final_score >= 0.5 else "🌑"
+                        st.subheader(stars_visual)
+                        
+                        # Quick Verdict Badge
+                        if final_score >= 4.0:
+                            st.success("✅ HIGH INTEGRITY")
+                        elif final_score >= 2.5:
+                            st.warning("⚠️ CAUTION: MIXED")
+                        else:
+                            st.error("🚩 UNTRUSTWORTHY")
+
+                    with col_stats:
+                        # Visual Breakdown Metrics
+                        c1, c2, c3 = st.columns(3)
+                        c1.metric("Total Analyzed", total)
+                        c2.metric("Genuine", genuine_count)
+                        c3.metric("Sabotage/Fake", sabotage_count)
+                        
+                        # Integrity Progress Bar
+                        st.write("**Overall Marketplace Authenticity:**")
+                        st.progress(trust_ratio)
+
+                    # --- 2. THE DETAILED BREAKDOWN ---
+                    st.divider()
+                    st.subheader("📑 Top Review Investigations")
+                    st.write("Below is a breakdown of the first
 
 with tab3:
     p_name = st.text_input("Product Name:")
