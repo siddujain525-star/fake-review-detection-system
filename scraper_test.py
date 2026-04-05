@@ -2,7 +2,9 @@ import time
 import random
 import urllib.parse
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_sync  # Corrected Import
+from playwright_stealth import stealth_sync # Try this first
+# If that fails, the library might be using the older 'stealth' export:
+# from playwright_stealth import stealth_sync as stealth
 
 # 1. THE URL SCRAPER (For Tab 2)
 def scrape_amazon_reviews(url, max_reviews=10):
