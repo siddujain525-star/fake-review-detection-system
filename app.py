@@ -12,38 +12,34 @@ st.set_page_config(page_title="AI Review Analyser", layout="wide")
 
 # --- SABOTAGE LOGIC FUNCTION ---
 def detect_sabotage(text):
-    """
-    Analyzes if the intention of a flagged fake review is to 
-    specifically sabotage the product/brand.
-    """
     text_lower = text.lower()
     sabotage_score = 0
     reasons = []
+    explanation = ""
 
-    # 1. Competitor Redirection (High Sabotage Indicator)
-    competitor_patterns = [
-        r'buy .* instead', r'switch to', r'better than this', 
-        r'recommend .* over', r'get the .* version'
-    ]
+    # 1. Competitor Redirection
+    competitor_patterns = [r'buy .* instead', r'switch to', r'better than this', r'recommend .* over']
     if any(re.search(p, text_lower) for p in competitor_patterns):
         sabotage_score += 50
         reasons.append("Promoting Competitor")
+        explanation += "• **Market Redirection:** The reviewer explicitly suggests a different product, which is a classic sign of competitor-driven sabotage.\n"
 
-    # 2. Defamatory/Malicious Language
-    malicious_terms = ['scam', 'fraud', 'stole', 'sue', 'illegal', 'lawsuit', 'toxic', 'garbage']
+    # 2. Defamatory Language
+    malicious_terms = ['scam', 'fraud', 'stole', 'sue', 'illegal', 'lawsuit', 'toxic']
     found_terms = [term for term in malicious_terms if term in text_lower]
     if found_terms:
         sabotage_score += 30
-        reasons.append(f"Malicious Keywords: {', '.join(found_terms)}")
+        reasons.append("Malicious Keywords")
+        explanation += f"• **Extreme Hostility:** Use of legal or high-alert words ({', '.join(found_terms)}) suggests an intent to cause brand damage rather than provide constructive feedback.\n"
 
     # 3. Structural Aggression
     if len(text) > 50 and text.isupper():
         sabotage_score += 20
-        reasons.append("Aggressive Formatting (All Caps)")
+        reasons.append("Aggressive Formatting")
+        explanation += "• **Formatting Bias:** The use of 'All Caps' combined with negative sentiment is often used in coordinated 'Review Bombing' attacks.\n"
 
-    # Return True if score exceeds threshold
     is_sabotage = sabotage_score >= 50
-    return is_sabotage, reasons, sabotage_score
+    return is_sabotage, reasons, sabotage_score, explanation
 
 # --- MODEL LOADING ---
 @st.cache_resource
