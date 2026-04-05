@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 # ==========================================
 def scrape_amazon_reviews(url, max_reviews=20):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=500)
+       browser = p.chromium.launch(headless=True)
         page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0")
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
