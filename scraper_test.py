@@ -3,7 +3,7 @@ import os
 import subprocess
 from playwright.sync_api import sync_playwright
 
-def scrape_amazon_reviews(url, max_reviews=10):
+def scrape_amazon_reviews(url, max_reviews=20):
     # 1. Ensure Playwright is installed on the server
     try:
         if not os.path.exists("/tmp/playwright_installed"):
