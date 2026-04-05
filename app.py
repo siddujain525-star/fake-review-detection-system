@@ -1,5 +1,11 @@
-import asyncio
 import sys
+import os
+# Add the current directory to the path so it can find the 'src' folder
+sys.path.append(os.path.dirname(__ignore_file__))
+import os
+# This command downloads the necessary browser for Playwright to run
+os.system("playwright install chromium")import asyncio
+
 import warnings
 import joblib
 import numpy as np
