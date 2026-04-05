@@ -1,5 +1,20 @@
+
 import sys
 import os
+import streamlit as st  # <--- THIS MUST BE HERE
+
+# 1. Path and Browser Logic
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+@st.cache_resource
+def install_browser():
+    os.system("playwright install chromium")
+
+install_browser()
+
+# ... rest of your imports (asyncio, joblib, etc.)
 
 # 1. FIX: Correct path addition to find the 'src' folder
 current_dir = os.path.dirname(os.path.abspath(__file__))
